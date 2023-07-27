@@ -45,7 +45,7 @@ text_splitter_conf = {
 }
 
 # Switches
-host = aoss_host  # or es_host
+host = es_host  # or aoss_host
 input_file = input_file_1
 
 # Load document and split to texts
