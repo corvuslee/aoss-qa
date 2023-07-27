@@ -9,32 +9,27 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-
-# ES/AOSS connection
-es_host = os.environ['ES_ENDPOINT']
-aoss_host = os.environ['AOSS_ENDPOINT']
-credentials = boto3.Session().get_credentials()
-es_auth = AWSV4SignerAuth(credentials, 'eu-west-1', 'es')
-aoss_auth = AWSV4SignerAuth(credentials, 'eu-west-1', 'aoss')
-es_client_conf = {
-    "http_auth": es_auth,
-    "use_ssl": True,
-    "verify_certs": True,
-    "connection_class": RequestsHttpConnection,
-    "pool_maxsize": 20
-}
-aoss_client_conf = {
-    "http_auth": aoss_auth,
-    "use_ssl": True,
-    "verify_certs": True,
-    "connection_class": RequestsHttpConnection,
-    "pool_maxsize": 20
-}
-
 # Documents, index
 index = 'aoss_qa'
 input_file_1 = 'data/state_of_the_union.txt'
 input_file_2 = 'data/Donald J. Trump [February 05, 2019].txt'
+input_file = input_file_1  # Input file switching
+
+# Amazon OpenSearch Service connection
+host = os.environ['AOSS_ENDPOINT']
+splitted_host_str = host.split('.')
+region = splitted_host_str[-4]
+service = splitted_host_str[-3]
+credentials = boto3.Session().get_credentials()
+auth = AWSV4SignerAuth(credentials, region, service)
+aoss_client_conf = {
+    "http_auth": auth,
+    "use_ssl": True,
+    "verify_certs": True,
+    "connection_class": RequestsHttpConnection,
+    "pool_maxsize": 20,
+    "is_aoss": service == 'aoss'
+}
 
 # LangChain
 text_splitter_conf = {
@@ -44,26 +39,18 @@ text_splitter_conf = {
     "add_start_index": True,
 }
 
-# Switches
-host = es_host  # or aoss_host
-input_file = input_file_1
-
 # Load document and split to texts
 loader = UnstructuredFileLoader(input_file)
 text_splitter = RecursiveCharacterTextSplitter(**text_splitter_conf)
 texts = loader.load_and_split(text_splitter)
 
 # Connect to OpenSearch
-is_aoss = True if host == aoss_host else False
-client_conf = aoss_client_conf if is_aoss else es_client_conf
-
 embeddings_model = OpenAIEmbeddings()
 vectorstore = OpenSearchVectorSearch(
     opensearch_url=host,
     index_name=index,
     embedding_function=embeddings_model,
-    is_aoss=is_aoss,
-    **client_conf
+    **aoss_client_conf
 )
 
 # Create unique ids for each text using filename and start index
