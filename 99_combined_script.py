@@ -66,18 +66,21 @@ vectorstore = OpenSearchVectorSearch(
     **client_conf
 )
 
+# Create unique ids for each text using filename and start index
+ids = [
+    f"{os.path.basename(text.metadata['source'])}_{text.metadata['start_index']}"
+    for text in texts
+]
 # Load text & embeddings to OpenSearch
 text_id_list = vectorstore.add_documents(
     texts,
+    ids=ids,
     engine="faiss",
     space_type="l2",
     ef_construction=512,
     m=16
 )
 assert len(text_id_list) == len(texts)
-
-# # Check first item
-# print(vectorstore.client.search(index=index, size=1))
 
 # QA
 question = "What did the president say about Ketanji Brown Jackson"
@@ -87,10 +90,4 @@ qa_chain = RetrievalQA.from_chain_type(
     llm,
     retriever=vectorstore.as_retriever()
 )
-answer = qa_chain({"query": question})
-print(
-f"""
-Question: {answer["query"]}
-Answer: {answer["result"]}
-"""
-)
+print(qa_chain({"query": question}))
