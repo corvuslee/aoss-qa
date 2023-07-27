@@ -87,4 +87,10 @@ qa_chain = RetrievalQA.from_chain_type(
     llm,
     retriever=vectorstore.as_retriever()
 )
-qa_chain({"query": question})
+answer = qa_chain({"query": question})
+print(
+f"""
+Question: {answer["query"]}
+Answer: {answer["result"]}
+"""
+)
