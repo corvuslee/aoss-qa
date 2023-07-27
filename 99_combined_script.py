@@ -9,11 +9,13 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# Documents, index
-index = 'aoss_qa'
+# Manual input
 input_file_1 = 'data/state_of_the_union.txt'
 input_file_2 = 'data/Donald J. Trump [February 05, 2019].txt'
 input_file = input_file_1  # Input file switching
+
+index = 'aoss_qa'
+embedding_dimension = 1536
 
 # Amazon OpenSearch Service connection
 host = os.environ['AOSS_ENDPOINT']
@@ -29,6 +31,32 @@ aoss_client_conf = {
     "connection_class": RequestsHttpConnection,
     "pool_maxsize": 20,
     "is_aoss": service == 'aoss'
+}
+
+# Index settings and mappings
+index_body = {
+    "settings": {
+        "number_of_shards": 1,
+        "number_of_replicas": 0,
+        "knn": True
+    },
+    "mappings": {
+        "properties": {
+            "vector_field": {
+                "type": "knn_vector",
+                "dimension": embedding_dimension,
+                "method": {
+                    "name": "hnsw",
+                    "engine": "faiss",
+                    "space_type": "l2",
+                    "parameters": {
+                        "ef_construction": 512,
+                        "m": 16
+                    }
+                }
+            }
+        }
+    }
 }
 
 # LangChain
@@ -53,6 +81,13 @@ vectorstore = OpenSearchVectorSearch(
     **aoss_client_conf
 )
 
+# Create index if not exists
+if not vectorstore.client.indices.exists(index):
+    vectorstore.client.indices.create(
+        index=index,
+        body=index_body
+    )
+
 # Create unique ids for each text using filename and start index
 ids = [
     f"{os.path.basename(text.metadata['source'])}_{text.metadata['start_index']}"
@@ -61,11 +96,7 @@ ids = [
 # Load text & embeddings to OpenSearch
 text_id_list = vectorstore.add_documents(
     texts,
-    ids=ids,
-    engine="faiss",
-    space_type="l2",
-    ef_construction=512,
-    m=16
+    ids=ids
 )
 assert len(text_id_list) == len(texts)
 
