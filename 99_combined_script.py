@@ -1,3 +1,4 @@
+from dotenv import load_dotenv, find_dotenv
 import os
 import boto3
 from opensearchpy import RequestsHttpConnection, AWSV4SignerAuth
@@ -16,6 +17,9 @@ input_file = input_file_1  # Input file switching
 
 index = 'aoss_qa'
 embedding_dimension = 1536
+
+# Load environment variables from .env file
+_ = load_dotenv(find_dotenv())
 
 # Amazon OpenSearch Service connection
 host = os.environ['AOSS_ENDPOINT']
