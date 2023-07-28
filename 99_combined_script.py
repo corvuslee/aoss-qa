@@ -92,11 +92,11 @@ if not vectorstore.client.indices.exists(index):
         body=index_body
     )
 
-# Create unique ids for each text using filename and start index
-ids = [
-    f"{os.path.basename(text.metadata['source'])}_{text.metadata['start_index']}"
-    for text in texts
-]
+# Create unique ids for each text using document metadata
+ids = []
+for text in texts:
+    ids.append('_'.join([str(v) for v in text.metadata.values()]))
+
 # Load text & embeddings to OpenSearch
 text_id_list = vectorstore.add_documents(
     texts,
