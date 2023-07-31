@@ -4,6 +4,10 @@ data/
 # Mac
 .DS_Store
 
+# drawio
+*.bkp
+*.dtmp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
